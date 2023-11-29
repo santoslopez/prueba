@@ -85,7 +85,5 @@ def handle_connect():
         print('El hilo ya está en ejecución')
 
 if __name__ == '__main__':
-    #app.run(debug=True, port=5000)
-    # Obtén el puerto desde el entorno o usa uno predeterminado (5000)
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, debug=True,port=port,host='0.0.0.0')
+
+    socketio.run(app, debug=True)
