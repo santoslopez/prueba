@@ -21,10 +21,10 @@ app = Flask(__name__)
 obtenerFechaHora = datetime.now()
 formatearFecha = obtenerFechaHora.strftime("%d_%m_%_Y _%H:_%M:_%S")
 
-app.config["SECRET_KEY"] = "1234567890"
+#app.config["SECRET_KEY"] = "1234567890"
 
 # almacenar la sesion en el sistema
-app.config["SESSION_TYPE"] = "filesystem"
+#app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 #app.register_blueprint(VecinosView)
