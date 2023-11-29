@@ -36,6 +36,7 @@ socketio = SocketIO(app)
 ErrorHandlers.register(app,socketio)
 reading_thread = None
 
+'''
 @app.route('/listarMensajes',methods=['GET','POST'])
 def listarMensajes():
     idUsuarioSes = session.get("idUsuario")
@@ -57,8 +58,6 @@ def listarMensajes():
     formatoJSON = [{'id':mensaje[0],'tipoMensaje':mensaje[1],'mensaje':mensaje[2],'fecha':mensaje[3],'idUsuario':mensaje[4]} for mensaje in mensajes]
     
     return jsonify({'data': formatoJSON})
-
-'''
 @app.route('/listaPuertos',methods=['GET','POST'])
 def listaPuertos():
     puertos = obtenerPuertosCOM()    
