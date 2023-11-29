@@ -28,13 +28,13 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 #app.register_blueprint(VecinosView)
-app.register_blueprint(auth)
+#app.register_blueprint(auth)
 
 #app.register_blueprint(ViewMensajes)
 
 #socketio = SocketIO(app)
 #ErrorHandlers.register(app,socketio)
-reading_thread = None
+#reading_thread = None
 
 # realizar la consulta de login en sqlite 
 def queryLogin(usuario,passwordGuardar):
@@ -110,7 +110,7 @@ def registroCuenta():
 def logout():
     session.pop("usuarioSesion",None)
     flash("Se ha cerrado la sesion correctamente","sucess")
-    return redirect(url_for("auth.frmLogin"))
+    return redirect(url_for("frmLogin"))
 
 @app.route('/',methods=['GET','POST'])
 def index():
