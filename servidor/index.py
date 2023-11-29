@@ -1,125 +1,128 @@
-from flask import Flask, render_template, request, jsonify,g,redirect,url_for,session,flash
-from flask_socketio import SocketIO
-#from errores import ErrorHandlers
-#from viewsVecino import VecinosView
-#from enviarMensajes import *
-from auth import auth
-#from puertoSerial import *
-from flask_session import Session
 
-from database import nombreBaseDatos
-from logger import registroLog
+from flask import Flask,jsonify,request,Response,render_template
+from datetime import datetime;
 
-import threading
-import sqlite3
-import os 
+API_KEY = 'jW2fwtlHdLabxdxlOxd1fHedTF8DNGADhWumWqlu'
 
-from datetime import datetime
 
+# Darle un nombre a la variable y que se llamara en el main
 app = Flask(__name__)
 
-obtenerFechaHora = datetime.now()
-formatearFecha = obtenerFechaHora.strftime("%d_%m_%_Y _%H:_%M:_%S")
+diccionarioRoverCamaras =  {
+    "FHAZ":"Front Hazard Avoidance Camera",
+    "RHAZ":"Rear Hazard Avoidance Camera",
+    "MAST":"Mast Camera",
+    "CHEMCAM":"Chemistry and Camera Complex",
+    "MAHLI":"Mars Hand Lens Imager",
+    "MARDI":"Mars Descent Imager",
+    "NAVCAM":"Navigation Camera",
+    "PANCAM":"Panoramic Camera",
+    "MINITES":"Miniature Thermal Emission Spectrometer (Mini-TES)"	
+}
 
-#app.config["SECRET_KEY"] = "1234567890"
-
-# almacenar la sesion en el sistema
-#app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
-
-#app.register_blueprint(VecinosView)
-#app.register_blueprint(auth)
-
-#app.register_blueprint(ViewMensajes)
-
-#socketio = SocketIO(app)
-#ErrorHandlers.register(app,socketio)
-#reading_thread = None
-
-# realizar la consulta de login en sqlite 
-def queryLogin(usuario,passwordGuardar):
-    conexion = sqlite3.connect(nombreBaseDatos)
-    cursor = conexion.cursor()  
-    cursor.execute("select * from usuarios where usuario=? and password=?",(usuario,passwordGuardar,))
-    ejecutar = cursor.fetchall()
-    conexion.close()
-    return ejecutar
-
-@app.route('/login',methods=['POST'])
-def login():
-    if "usuarioSesion" not in session:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        usuario = request.form.get("txtUsuario")
-        passwordGuardar = request.form.get("txtPassword")
-        ejecutar = queryLogin(usuario,passwordGuardar)
-
-        # validar que el usuario y password sean correctos
-        if len(ejecutar) > 0:
-            # se crea la sesion de que existe el usuario
-            session["usuarioSesion"]=usuario
-            # se accede al primer resultado y primera columna
-            session["idUsuario"]=ejecutar[0][0]
-            usuarioSes = session["usuarioSesion"]
-            idUsuarioSes = session["idUsuario"]
-            flash("Inicio de sesion exitoso", "success")
-            return render_template("main/index.html",registroExitoso=True,usuarioSesion=usuarioSes,idUsuario=idUsuarioSes)
-        else:
-            flash("Usuario o contraseña incorrectos","error")
-            return render_template("auth/login.html",registroExitoso=False)
-
-       
-@app.route('/fmrLogin',methods=['GET','POST'])
-def frmLogin():
-    if "usuarioSesion" in session:
-        idUsuarioSes = session["idUsuario"]
-        return render_template("main/index.html",idUsuario=idUsuarioSes,usuarioSesion=session["usuarioSesion"])
-    else:
-        flash("No has iniciado sesión")
-        registroLog.info("El usuario no ha iniciado sesion redirigido al login.")
-        return render_template("auth/login.html")
-    
-@app.route('/frmRegistroCuenta',methods=['GET','POST'])
-def frmRegistroCuenta():
-    return render_template("auth/frmRegistroCuenta.html")
-
-@app.route('/registroCuenta',methods=["POST"])
-def registroCuenta():
-    if request.method == "POST":
-        usuarioGuardar = request.form.get("txtUsuario")
-        passwordGuardar = request.form.get("txtPassword")
-        
-        if not usuarioGuardar or not passwordGuardar:
-            flash("Debes ingresar un usuario y una contraseña","error")
-            return render_template("auth/frmRegistroCuenta.html")
-        else:
-            with sqlite3.connect(nombreBaseDatos) as conexion:
-                cursor = conexion.cursor()
-                cursor.execute("INSERT INTO usuarios(usuario,password) VALUES (?, ?)",(usuarioGuardar,passwordGuardar))
-                conexion.commit()
-                registroLog.info("El usuario se ha guardado correctamente.")
-
-                return render_template("auth/registroExitoso.html")
-    else:
-        return render_template("auth/frmRegistroCuenta.html")
-
-
-# cerrar la sesion del usuario
-@app.route('/logout',methods=['GET','POST'])
-def logout():
-    session.pop("usuarioSesion",None)
-    flash("Se ha cerrado la sesion correctamente","sucess")
-    return redirect(url_for("frmLogin"))
-
-@app.route('/',methods=['GET','POST'])
+# Para mandar a llamar al el archivo de inicio
+@app.route('/')
 def index():
-    if "usuarioSesion" in session:
-        idUsuarioSes = session["idUsuario"]
-        return render_template("main/index.html",usuarioSesion=session["usuarioSesion"],idUsuario=idUsuarioSes)
+    return render_template('index.html')
+
+# Manda a llamar la página de apod: que muestra la imagen del día
+@app.route('/apod')
+def apod_route():
+    # apod() es la función que se encuentra en el archivo apod.py
+    return apod()
+
+# Se utiliza en filtrarImagenes.js
+@app.route('/llamar_apod/<string:parametro>',methods=['POST'])
+def llamar_apod(parametro):
+    resultado = photos(parametro)
+    return resultado
+
+@app.route('/exploracionPlanetaria')
+def explP_route():
+    return exploracionPlanetaria()
+
+@app.route('/MarsRover')
+def MarsRover_route():
+    return render_template('MarsRover/photos.html',diccionarioRoverCamaras=diccionarioRoverCamaras)
+
+@app.route('/galeriaMultimedia')
+def galeryMultimedia():
+    return render_template('galeriaMultimedia/galeriaMultimedia.html')
+
+@app.route('/galeriaMultimediaFiltrarBusqueda/<string:parametro1>/<string:parametro2>',methods=['POST'])
+def galeryMultimedia_route(parametro1,parametro2):
+    return buscarGaleriaMultimedia(parametro1,parametro2)
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('error/404.html',error=error)
+
+def apod():
+    url = 'https://api.nasa.gov/planetary/apod'
+    # obtener fecha actual de mi servidor, NO de la NASA
+    fechaActual = datetime.now().strftime('%Y-%m-%d')
+    parametros = {'api_key':API_KEY}
+    response = request.get(url,params=parametros)
+    
+    try:
+        if response.status_code == 200:
+            datos = response.json()
+            urlAPOD = datos['url']        
+            explanation = datos['explanation']
+            titleImage = datos['title']   
+            #copyright = datos['copyright']        
+            return render_template('APOD.html',explanation=explanation,titleImage=titleImage,urlAPOD=urlAPOD,copyright="No disponible",date=fechaActual)   
+        else:
+            return render_template('APOD.html',errorAPI="Error en la API")
+        # en caso que se coloque un dato que no existe en la API mostrarlo
+    except KeyError as e:
+        mensaje_error = f"La clave '{e.args[0]}' no existe en el diccionario."
+        return jsonify({'error': mensaje_error}), 400
+
+def buscarGaleriaMultimedia(inputBusqueda,tipoBusqueda):
+    url ="https://images-api.nasa.gov/search"
+    fechaActual = datetime.now().strftime('%Y')
+    parametros = {'q':inputBusqueda,'media_type':tipoBusqueda,'year_start':1920,'year_end':fechaActual}
+        
+    response = request.get(url,params=parametros)
+    #try:
+    if response.status_code == 200:
+        datos = response.json()
+                
+        # Se envia el diccionario con los datos de la API y en galeriaMultimedia.js se recupera la informacion
+        return jsonify(datos)
+    elif response.status_code == 400:
+        return jsonify({'error':'Parámetro no válido en la API'}), 400
     else:
-        flash("No has iniciado sesión")
-    return render_template("auth/login.html")
+        return jsonify({'error':'Error en la API'}), 500
+        #except KeyError as e:
+        #mensaje_error = f"La clave '{e.args[0]}' no existe en el diccionario."
+        #return jsonify({'error': mensaje_error}), 400
+        #return jsonify({'error':'Parámetro no válido en la API'}), 400
+
+def photos(nombreCamara):
+    url = "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos"
+    #url = "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos";
+    #camar = nombreCamara.lower()
+    
+    parametros = {'sol':1000,'camera':nombreCamara,'api_key':API_KEY}
+    response = request.get(url,params=parametros)
+    try:
+        if response.status_code == 200:
+            datos = response.json()
+           
+            # https://api.nasa.gov nombres de las camaras
+
+            return datos
+        else:
+            return render_template('MarsRover/photos.html',errorAPI="Error en la API")
+        # en caso que se coloque un dato que no existe en la API mostrarlo
+    except KeyError as e:
+        mensaje_error = f"La clave '{e.args[0]}' no existe en el diccionario."
+        return jsonify({'error': mensaje_error}), 400
+
+def exploracionPlanetaria():
+    return render_template('exoplanetArchive.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
